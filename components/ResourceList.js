@@ -1,11 +1,27 @@
-
 import { Query } from 'react-apollo';
-import { Card } from '@shopify/polaris';
-import store from 'store-js';
+import { Card,
+    ResourceList,
+    Stack,
+    TextStyle,
+    Thumbnail
+} from '@shopify/polaris';
+import store from 'store-js';import { Redirect } from '@shopify/app-bridge/actions';
+import { Context } from '@shopify/app-bridge-react';
 import {GET_PRODUCTS_BY_ID} from '../graphql/Queries';
 
 class ResourceListWithProducts extends React.Component {
+    static contextType = Context;
     render() {
+        
+    const app = this.context;
+    const redirectToProduct = () => {
+      const redirect = Redirect.create(app);
+      redirect.dispatch(
+        Redirect.Action.APP,
+        '/edit-products',
+      );
+    };
+    const twoWeeksFromNow = new Date(Date.now() + 12096e5).toDateString();
       return (
         <Query query={GET_PRODUCTS_BY_ID} variables={{ ids: store.get('ids') }}>
           {({ data, loading, error }) => {
@@ -14,7 +30,55 @@ class ResourceListWithProducts extends React.Component {
             console.log(data);
             return (
               <Card>
-                <p>stuff here</p>
+                <ResourceList
+                showHeader
+                resourceName={{ singular: 'Product', plural: 'Products' }}
+                items={data.nodes}
+                renderItem={item => {
+                  const media = (
+                    <Thumbnail
+                      source={
+                        item.images.edges[0]
+                          ? item.images.edges[0].node.originalSrc
+                          : ''
+                      }
+                      alt={
+                        item.images.edges[0]
+                          ? item.images.edges[0].node.altText
+                          : ''
+                      }
+                    />
+                  );
+                  const price = item.variants.edges[0].node.price;
+                  return (
+                    <ResourceList.Item
+                      id={item.id}
+                      media={media}
+                      accessibilityLabel={`View details for ${item.title}`}
+                      onClick={() => {
+                        store.set('item', item);
+                        redirectToProduct();
+                      }}
+                    >
+                      <Stack>
+                        <Stack.Item fill>
+                          <h3>
+                            <TextStyle variation="strong">
+                              {item.title}
+                            </TextStyle>
+                          </h3>
+                        </Stack.Item>
+                        <Stack.Item>
+                          <p>${price}</p>
+                        </Stack.Item>
+                        <Stack.Item>
+                          <p>Expires on {twoWeeksFromNow} </p>
+                        </Stack.Item>
+                      </Stack>
+                    </ResourceList.Item>
+                  );
+                }}
+              />
               </Card>
             );
           }}
@@ -23,4 +87,4 @@ class ResourceListWithProducts extends React.Component {
     }
   }
   
-   export default ResourceListWithProducts;
+export default ResourceListWithProducts;
